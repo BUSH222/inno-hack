@@ -60,16 +60,15 @@ def make_commit(data, userid, repoid, commit_name):
 
 
 def get_user_repos(userid):
-    cur.execute('SELECT repoid FROM repo_access WHERE userid = %s', userid)
-    return cur.fetchall()
+    cur.execute('SELECT repoid FROM repo_access WHERE userid = %s', (userid, ))
+    return list(map(lambda x: x[0], cur.fetchall()))
 
 
 def add_user_to_repo(userid, repoid):
-    cur.execute('INSERT INTO repo_access(repoid, userid) VALUES (%s, %s)' (repoid, userid))
+    cur.execute('INSERT INTO repo_access(repoid, userid) VALUES (%s, %s)', (repoid, userid, ))
     conn.commit()
 
 
 if __name__ == "__main__":
     preload_db(populate=False)
-    print(get_user_repos(1))
     conn.close()
