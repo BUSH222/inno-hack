@@ -1,6 +1,6 @@
 from flask import Flask, redirect, render_template, request, url_for
 from flask_login import login_user, LoginManager, current_user, login_required, UserMixin, logout_user
-import psycopg2
+from dbmanager import conn, cur, preload_db, create_user
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
@@ -8,20 +8,13 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-conn = psycopg2.connect(database='slotmachine',
-                        user='postgres',
-                        host='localhost',
-                        password='12345678',
-                        port=5432)
-cur = conn.cursor()
+class User(UserMixin):
+    def __init__(self, id, username, password, balance):
+        self.id = id
+        self.username = username
+        self.password = password
+        self.balance = balance
 
-schema_obj = open('schema.sql', 'r')
-schema = schema_obj.read()
-schema_obj.close()
-
-@app.route('/')
-def dashboard():
-    return render_template("main.html")
 @login_manager.user_loader
 def load_user(user_id):
     cur.execute("SELECT id, name, password, balance FROM users WHERE id = %s", (user_id,))
@@ -66,11 +59,38 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-@app.route('/dashboard')
+        
+
+
+@app.route('/dashboard',methods=['GET'])
 @login_required
 def dashboard():
-    return f'Hello, {current_user.username}! Your balance is {current_user.balance}.'
+    if request.method == "POST":
+        option = request.args.get("opt")
+        if option == "new_reposidtory":
+            redirect(url_for())
+        if option == "join_reposidtory":
+            redirect(url_for())
+        if option == "my_reposidtoriers":
+            redirect(url_for())
+        
+            
+    return render_template
+
+@app.route('/new_repository_edit')
+@login_required
+def n_editor():
+    return render_template()
+
+
+
+@app.route('/ex_repository_edit')
+@login_required
+def e_editor():
+    return render_template()
+
 
 if __name__ == '__main__':
+    preload_db()
     app.run(host='0.0.0.0', port=8000)
 
