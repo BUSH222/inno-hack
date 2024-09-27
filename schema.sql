@@ -18,7 +18,9 @@ CREATE TABLE IF NOT EXISTS repo_access (
 
 CREATE TABLE IF NOT EXISTS commits (
     id SERIAL PRIMARY KEY,
+    name VARCHAR(32) NOT NULL,
     creation_time TIMESTAMP,
     author INT REFERENCES users(id),
+    repository INT REFERENCES repositories(id),
     data BYTEA
 );
