@@ -1,4 +1,3 @@
-import requests
 from os import environ
 from dotenv import find_dotenv, load_dotenv
 import json

@@ -20,7 +20,7 @@ def preload_db(populate=False):
 
 
 def create_user(name, password):
-    cur.execute('INSERT INTO users(name, password) VALUES (%s, %s) RETURNING (id, name, password)', (name, password))
+    cur.execute('INSERT INTO users(name, password) VALUES (%s, %s) RETURNING (id, name, password, email)', (name, password))
     conn.commit()
     return cur.fetchone()[0]
 
@@ -49,10 +49,27 @@ def create_repository(userid, reponame):
 
 def get_repo_info(id):
     """list of commits"""
-    cur.execute('')
+    cur.execute('SELECT id, name FROM commits WHERE repository = %s', (id, ))
+    return cur.fetchall()
+
+
+def make_commit(data, userid, repoid, commit_name):
+    cur.execute('INSERT INTO commits(name, author, repository, data) VALUES (%s, %s, %s, %s)',
+                (commit_name, userid, repoid, data))
+    conn.commit()
+
+
+def get_user_repos(userid):
+    cur.execute('SELECT repoid FROM repo_access WHERE userid = %s', userid)
+    return cur.fetchall()
+
+
+def add_user_to_repo(userid, repoid):
+    cur.execute('INSERT INTO repo_access(repoid, userid) VALUES (%s, %s)' (repoid, userid))
+    conn.commit()
 
 
 if __name__ == "__main__":
     preload_db(populate=False)
-    print(create_repository(1, "testrepo"))
+    print(get_user_repos(1))
     conn.close()

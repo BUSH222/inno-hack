@@ -1,8 +1,8 @@
 -- Insert users
-INSERT INTO users (name, password) VALUES
-('Alice', 'password123'),
-('Bob', 'securepass'),
-('Charlie', 'charlie123');
+INSERT INTO users (name, password, email) VALUES
+('Alice', 'password123', 'email1@'),
+('Bob', 'securepass', 'email2@'),
+('Charlie', 'charlie123', 'email3@');
 
 -- Insert repositories
 INSERT INTO repositories (name, user_creator_id) VALUES

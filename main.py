@@ -1,7 +1,8 @@
 from flask import Flask, redirect, render_template, request, url_for, abort
 from flask_login import login_user, LoginManager, current_user, login_required, UserMixin, logout_user
 from dbmanager import (conn, cur, preload_db, create_user, get_all_user_data_by_name,
-                       get_all_user_data_by_id, check_access, create_repository)
+                       get_all_user_data_by_id, check_access, create_repository,
+                       get_repo_info, get_user_repos, add_user_to_repo, make_commit)
 from oauthlib.oauth2 import WebApplicationClient
 from helper import (GOOGLE_CLIENT_ID,
                     GOOGLE_CLIENT_SECRET,
@@ -18,10 +19,11 @@ google_provider_cfg = requests.get(GOOGLE_DISCOVERY_URL).json()
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
 
 class User(UserMixin):
-    def __init__(self, id, username, password):
+    def __init__(self, id, username, password, email):
         self.id = id
         self.username = username
         self.password = password
+        self.email = email
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -103,7 +105,7 @@ def callback():
     if user.email in APPROVED_EMAILS:  # give user admin
         user.adminst = 1
     if not User.get(unique_id):
-        User.create(unique_id, users_name, users_email, picture, admin=1)
+        User.create(unique_id, users_name, users_email, admin=1)
     login_user(user)
     return redirect(url_for("index"))
 
@@ -119,18 +121,17 @@ def logout():
 @login_required
 def dashboard():
     if request.method == "POST":
-        option = request.args.get("opt")
-        if option == "new_reposidtory":
-            return redirect(url_for())
-        if option == "join_reposidtory":
-            id_of_rep = request.json
-            # check if uer has acsess
-            if check_access(id_of_rep,current_user.id):   
-                return redirect(url_for('repository_edit'),user=current_user.user_name,id_of_rep=id_of_rep['id'])
+        usr_input = request.json
+        if usr_input["btn_type"] == "new_reposidtory":
+            return redirect(url_for("new_repository_creator"))
+        if usr_input["btn_type"]  == "join_reposidtory":
+            
+            if check_access(usr_input["rep_id"],current_user.id):   
+                return redirect(url_for('repository_edit'),rep_id=usr_input['rep_id'])
             else:
                 return render_template("error.html" ,change="error! you have no access")
-        if option == "my_reposidtoriers":
-            return redirect(url_for())
+        if usr_input["btn_type"]  == "my_reposidtoriers":
+            return redirect(url_for('my_repositories'))
             
     return render_template("error.html", change='')
 
@@ -139,7 +140,15 @@ def dashboard():
 @app.route('/my_repositories',methods=['GET','POST'])
 @login_required
 def my_reps():
-    return render_template()
+    if request.method == "GET":
+        info = get_user_repos(current_user.id)
+    if request.method == "POST":
+        usr_input = request.json
+        if usr_input["btn_click"] == "edit_existing_repo":
+            return redirect(url_for("repository_edit",usr_input["rep_id"]))
+        elif usr_input["btn_click"] == "create_new_repo":
+            return redirect(url_for("new_repository_creator"))
+    return render_template(,info=info)
 
 @app.route('/new_repository_creator',methods=['GET','POST'])
 @login_required
@@ -148,7 +157,7 @@ def n_creator():
         info = request.json
         # check validity of info provided
         rep_id = create_repository(current_user.id, info["repository_name"])
-        return redirect(url_for('repository_edit'),rep_id=rep_id,user_id=current_user.id)
+        return redirect(url_for('repository_edit'),rep_id=rep_id)
     
     return render_template()
 
@@ -160,17 +169,54 @@ def n_creator():
 def e_editor():
     if request.method == "GET":
         rep_id = request.args.get("rep_id")
-        user_id = request.args.get("user_id")
+        user_id = current_user.id
         if check_access(rep_id,user_id)
             contains = get_repo_info(rep_id)
         else:
             abort(403)
     if request.method == "POST":
+        user_choice = request.json
+        if user_choice["btn_click"] = "new_commit":
+            return redirect(url_for('new_commit',rep_id=rep_id)) 
+        elif user_choice["btn_click"] = "add_users_to_repository":
+            return redirect(url_for('add_users_to_repo'),rep_id=rep_id) 
+    return render_template(,contains=contains)
+
+
+
+@app.route('/add_users_to_repo',method=["POST"])
+@login_required
+def add_users():
+    change=''
+    if request.method == "POST":
+        usr_input = request.json
+        rep_id = request.args.get("rep_id")
+        if check_access(rep_id,current_user.id):
+            if usr_input["btn_click"] = "add":
+                add_user_to_repo(rep_id,usr_input["user_id_to_add"])
+                change="Users added!"
+            else:
+                abort(403)
+    return render_template(,change=change)
+
+
+@app.route('/new_commit',method=["POST"])
+@login_required
+def c_editor():
+    change=''
+    if request.method == "POST":
         user_changes = request.json
-        if user_changes["btn_type"] == 'commit':
-            make_commit(user_changes["text"],rep_id,us)
-            
-return render_template(,contains=contains)
+        rep_id = request.args.get("rep_id")
+        user_id = current_user.id
+        if check_access(rep_id,user_id):
+            if user_changes["btn_type"] == 'commit':
+                make_commit(user_changes["text"],user_id,rep_id,user_changes["c_name"])
+                change='Commited!'
+        else:
+            abort(403)
+    return render_template(,change=change)
+
+
 if __name__ == '__main__':
     preload_db()
     app.run(host='0.0.0.0', port=5000)
