@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>inno hack</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                {% if not logged_in %}
+                <li><a href="{{ url_for('login') }}" class="btn">Login</a></li>
+                <li><a href="{{ url_for('signup') }}" class="btn">Sign up</a></li>
+                {% else %}
+                <li><a href="{{ url_for('logout') }}" class="btn">Log out</a></li>
+                <li><a href="{{ url_for('account') }}"><img src="{{ url_for('static', filename='default_user_icon.png') }}" alt="Profile picture" class="profile-pic"></a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+    
+    <main>
+        <h1>Welcome</h1>
+    </main>
+</body>
+</html>
