@@ -18,12 +18,14 @@ login_manager.login_view = 'login'
 google_provider_cfg = requests.get(GOOGLE_DISCOVERY_URL).json()
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
 
+
 class User(UserMixin):
     def __init__(self, id, username, password, email):
         self.id = id
         self.username = username
         self.password = password
         self.email = email
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -64,6 +66,7 @@ def login():
     #         return redirect(url_for('dashboard'))
     # else:
     #     return render_template('login.html')
+
 
 @app.route("/login/callback")
 def callback():
@@ -109,35 +112,32 @@ def callback():
     login_user(user)
     return redirect(url_for("index"))
 
+
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('login'))
 
-        
 
-@app.route('/dashboard',methods=['GET','POST'])
+@app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
     if request.method == "POST":
         usr_input = request.json
         if usr_input["btn_type"] == "new_reposidtory":
             return redirect(url_for("new_repository_creator"))
-        if usr_input["btn_type"]  == "join_reposidtory":
-            
-            if check_access(usr_input["rep_id"],current_user.id):   
-                return redirect(url_for('repository_edit'),rep_id=usr_input['rep_id'])
+        if usr_input["btn_type"] == "join_reposidtory":
+            if check_access(usr_input["rep_id"], current_user.id):
+                return redirect(url_for('repository_edit'), rep_id=usr_input['rep_id'])
             else:
-                return render_template("error.html" ,change="error! you have no access")
-        if usr_input["btn_type"]  == "my_reposidtoriers":
+                return render_template("error.html", change="error! you have no access")
+        if usr_input["btn_type"] == "my_reposidtoriers":
             return redirect(url_for('my_repositories'))
-            
     return render_template("error.html", change='')
 
 
-
-@app.route('/my_repositories',methods=['GET','POST'])
+@app.route('/my_repositories', methods=['GET', 'POST'])
 @login_required
 def my_reps():
     if request.method == "GET":
@@ -145,79 +145,75 @@ def my_reps():
     if request.method == "POST":
         usr_input = request.json
         if usr_input["btn_click"] == "edit_existing_repo":
-            return redirect(url_for("repository_edit",usr_input["rep_id"]))
+            return redirect(url_for("repository_edit", usr_input["rep_id"]))
         elif usr_input["btn_click"] == "create_new_repo":
             return redirect(url_for("new_repository_creator"))
-    return render_template(,info=info)
+    return render_template("account.html", info=info)
 
-@app.route('/new_repository_creator',methods=['GET','POST'])
+
+@app.route('/new_repository_creator', methods=['GET', 'POST'])
 @login_required
 def n_creator():
     if request.method == "POST":
         info = request.json
         # check validity of info provided
         rep_id = create_repository(current_user.id, info["repository_name"])
-        return redirect(url_for('repository_edit'),rep_id=rep_id)
-    
-    return render_template()
+        return redirect(url_for('repository_edit'), rep_id=rep_id)
+    return render_template()  # maybe create and just open a new blank repository
 
 
-
-
-@app.route('/repository_edit',methods=['GET','POST'])
+@app.route('/repository_edit', methods=['GET', 'POST'])
 @login_required
 def e_editor():
     if request.method == "GET":
         rep_id = request.args.get("rep_id")
         user_id = current_user.id
-        if check_access(rep_id,user_id)
+        if check_access(rep_id, user_id):
             contains = get_repo_info(rep_id)
         else:
             abort(403)
     if request.method == "POST":
         user_choice = request.json
-        if user_choice["btn_click"] = "new_commit":
-            return redirect(url_for('new_commit',rep_id=rep_id)) 
-        elif user_choice["btn_click"] = "add_users_to_repository":
-            return redirect(url_for('add_users_to_repo'),rep_id=rep_id) 
-    return render_template(,contains=contains)
+        if user_choice["btn_click"] == "new_commit":
+            return redirect(url_for('new_commit', rep_id=rep_id))
+        elif user_choice["btn_click"] == "add_users_to_repository":
+            return redirect(url_for('add_users_to_repo'), rep_id=rep_id)
+    return render_template("commit_list.html", contains=contains)
 
 
-
-@app.route('/add_users_to_repo',method=["POST"])
+@app.route('/add_users_to_repo', method=["POST"])
 @login_required
 def add_users():
-    change=''
+    change = ''
     if request.method == "POST":
         usr_input = request.json
         rep_id = request.args.get("rep_id")
-        if check_access(rep_id,current_user.id):
-            if usr_input["btn_click"] = "add":
-                add_user_to_repo(rep_id,usr_input["user_id_to_add"])
-                change="Users added!"
+        if check_access(rep_id, current_user.id):
+            if usr_input["btn_click"] == "add":
+                add_user_to_repo(rep_id, usr_input["user_id_to_add"])
+                change = "Users added!"
             else:
                 abort(403)
-    return render_template(,change=change)
+    return redirect(url_for('repository_edit', rep_id=rep_id))
 
 
-@app.route('/new_commit',method=["POST"])
+@app.route('/new_commit', method=["POST"])
 @login_required
 def c_editor():
-    change=''
+    change = ''
     if request.method == "POST":
         user_changes = request.json
         rep_id = request.args.get("rep_id")
         user_id = current_user.id
-        if check_access(rep_id,user_id):
+        if check_access(rep_id, user_id):
             if user_changes["btn_type"] == 'commit':
-                make_commit(user_changes["text"],user_id,rep_id,user_changes["c_name"])
-                change='Commited!'
+                make_commit(user_changes["text"], user_id, rep_id, user_changes["c_name"])
+                change = 'Commited!'
         else:
             abort(403)
-    return render_template(,change=change)
+    return render_template("commit_new.html", change=change)
 
 
 if __name__ == '__main__':
     preload_db()
     app.run(host='0.0.0.0', port=5000)
-

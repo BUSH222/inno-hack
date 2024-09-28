@@ -20,7 +20,8 @@ def preload_db(populate=False):
 
 
 def create_user(name, password):
-    cur.execute('INSERT INTO users(name, password) VALUES (%s, %s) RETURNING (id, name, password, email)', (name, password))
+    cur.execute('INSERT INTO users(name, password) VALUES (%s, %s) RETURNING (id, name, password, email)',
+                (name, password))
     conn.commit()
     return cur.fetchone()[0]
 
