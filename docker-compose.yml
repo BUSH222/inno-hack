@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  web:
+    restart: unless-stopped
+    build: .
+    ports:
+      - "5000:5432"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://postgres:12345678@db:5432/inno-hack-vcs
+
+  db:
+    image: postgres:16.4
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123445678
+      POSTGRES_DB: inno-hack-vcs
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
