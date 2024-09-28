@@ -6,23 +6,18 @@ app = Flask(__name__)
 
 @app.route('/')
 def dashboard():
-    return render_template("main.html")
+    return render_template("login_with.html")
 
-@app.route('/login')
-def login():
-    return "ok"
 
-@app.route('/signup')
-def signup():
-    return "ok"
+@app.route('/login_password')
+def login_password():
+    return render_template("login_password.html")
 
-@app.route('/logout')
-def logout():
-    return "ok"
 
 @app.route('/account')
 def account():
-    return "ok"
+    return render_template("account.html")
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000)
