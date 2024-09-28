@@ -14,7 +14,7 @@
 
     <div class="user-section">
         <img src="static/chrome.png" alt="User Avatar">
-        <div class="username">username</div>
+        <div class="username">{{ username }}</div>
         <button>INFO</button>
         <button>Edit profile</button>
         <button onclick="window.location.href='/logout';">log out</button>
@@ -35,11 +35,11 @@
             <tbody>
                 {% for repo in repositories %}
                 <tr>
-                    <td>{{ repo.id }}</td>
-                    <td>{{ repo.name }}</td>
-                    <td>{{ repo.creation_date }}</td>
-                    <td>{{ repo.author }}</td>
-                    <td><button onclick="window.location.href='/view_commit?id={{ repo.id }}';">View</button></td>
+                    <td>{{ repo[0] }}</td>
+                    <td>{{ repo[1] }}</td>
+                    <td>{{ repo[2] }}</td>
+                    <td>{{ repo[3] }}</td>
+                    <td><button onclick="window.location.href='/view_commit?id={{ repo[4] }}';">View</button></td>
                 </tr>
                 {% endfor %}
             </tbody>

@@ -9,7 +9,7 @@ if not dotenv_file:
     dotenv_file = find_dotenv()
 load_dotenv(dotenv_file)  # load secret keys
 
-
 GOOGLE_CLIENT_SECRET = environ.get("GOOGLE_CLIENT_SECRET", None)
 GOOGLE_CLIENT_ID = environ.get("GOOGLE_CLIENT_ID", None)
+GOOGLE_DISCOVERY_URL = environ.get("GOOGLE_DISCOVERY_URL", None)
 APPROVED_EMAILS = json.loads(environ.get("APPROVED_EMAILS", '[]'))

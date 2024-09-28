@@ -27,12 +27,12 @@ def create_user(name, password):
 
 
 def get_all_user_data_by_name(name):
-    cur.execute("SELECT id, name, password FROM users WHERE name = %s", (name,))
+    cur.execute("SELECT id, name, password, email FROM users WHERE name = %s", (name,))
     return cur.fetchone()
 
 
 def get_all_user_data_by_id(id):
-    cur.execute("SELECT id, name, password FROM users WHERE id = %s", (id,))
+    cur.execute("SELECT id, name, password, email FROM users WHERE id = %s", (id,))
     return cur.fetchone()
 
 
@@ -49,9 +49,14 @@ def create_repository(userid, reponame):
 
 
 def get_repo_info(id):
-    """list of commits"""
     cur.execute('SELECT id, name FROM commits WHERE repository = %s', (id, ))
     return cur.fetchall()
+
+
+def get_full_repo_info(id):
+    cur.execute('SELECT id, name, user_creator_id, user_creator_id FROM repositories WHERE user_creator_id = %s',
+                (id, ))
+    return cur.fetchall()[0]
 
 
 def make_commit(data, userid, repoid, commit_name):

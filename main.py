@@ -3,7 +3,8 @@ from flask_login import login_user, LoginManager, current_user, login_required, 
 from dbmanager import (preload_db, create_user, get_all_user_data_by_name,
                        get_all_user_data_by_id, check_access, create_repository,
                        get_repo_info, get_user_repos, add_user_to_repo, make_commit,
-                       validate_pwd, get_latest_commit, get_commit_files)
+                       validate_pwd, get_latest_commit, get_commit_files, 
+                       get_full_repo_info)
 from oauthlib.oauth2 import WebApplicationClient
 from helper import (GOOGLE_CLIENT_ID,
                     GOOGLE_CLIENT_SECRET,
@@ -17,6 +18,7 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 google_provider_cfg = requests.get(GOOGLE_DISCOVERY_URL).json()
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
+app.config['SECRET_KEY'] = 'bruh'
 
 
 class User(UserMixin):
@@ -35,14 +37,19 @@ def load_user(user_id):
     return None
 
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/')
+def index():
+    return render_template("login_with.html")
+
+
+@app.route('/login_password', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        usr_input = request.json
-        if usr_input["btn_type"] == "use_password":  # ВНИМАНИЕ use_password хз что делать что бы он работал
+        if True:   # usr_input["btn_type"] == "use_password"
             username = request.form['username']
             password = request.form['password']
-            user_data = get_all_user_data_by_name(username)
+            user_data = list(get_all_user_data_by_name(username))
+            print(user_data)
             if user_data:
                 if user_data[2] == password and len(password) < 32:
                     user = User(*user_data)
@@ -66,7 +73,21 @@ def login():
                 redirect_uri=request.base_url + "/callback",
                 scope=["openid", "email", "profile"],)
             return redirect(request_uri)
-    return render_template('login.html')
+    return render_template('login_password.html')
+
+
+@app.route('/login_gmail', methods=['GET', 'POST'])
+def login_gmail():
+        # Find out what URL to hit for Google login
+        authorization_endpoint = google_provider_cfg["authorization_endpoint"]
+
+        # Use library to construct the request for Google login and provide
+        # scopes that let you retrieve user's profile from Google
+        request_uri = client.prepare_request_uri(
+            authorization_endpoint,
+            redirect_uri=request.base_url + "/callback",
+            scope=["openid", "email", "profile"],)
+        return redirect(request_uri)
 
 
 @app.route("/login/callback")
@@ -121,17 +142,25 @@ def logout():
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
+    if request.method == "GET":
+        repositories = []
+        for repo in get_user_repos(current_user.id):
+            repositories.append(get_full_repo_info(repo))
+        username = current_user.username
+        print(get_user_repos(current_user.id))
+        return render_template("account.html", username=username, repositories=repositories)
     if request.method == "POST":
         usr_input = request.json
         if usr_input["btn_type"] == "new_repository":
             return redirect(url_for("new_repository_creator"))
-        if usr_input["btn_type"] == "join_repository":
+        elif usr_input["btn_type"] == "join_repository":
             if check_access(usr_input["rep_id"], current_user.id):
                 return redirect(url_for('repository_edit'), rep_id=usr_input['rep_id'])
             else:
                 return render_template("error.html", change="error! you have no access")
-        if usr_input["btn_type"] == "my_repositoriers":
+        elif usr_input["btn_type"] == "my_repositoriers":
             return redirect(url_for('my_repositories'))
+
     return render_template("error.html", change='')
 
 
@@ -259,4 +288,4 @@ def init_repo():
 
 if __name__ == '__main__':
     preload_db()
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=8000)  # , ssl_context='adhoc')

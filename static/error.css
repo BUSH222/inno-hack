@@ -1,0 +1,54 @@
+body {
+    background-image: url('/static/background.png');
+    font-family: Arial, sans-serif;
+    background-size: cover;
+    margin: 0;
+    padding: 0;
+    color: #EAEAEA;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* Full screen height */
+}
+
+.container {
+    text-align: center;
+    background: rgba(0, 0, 0, 0.7); /* Semi-transparent black background */
+    padding: 40px;
+    border-radius: 15px;
+    max-width: 600px;
+    width: 100%;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(5px);
+}
+
+h1 {
+    font-size: 3em;
+    margin-bottom: 20px;
+    color: #CBC5EA;
+}
+
+p {
+    font-size: 1.2em;
+    margin-bottom: 30px;
+    color: #EAEAEA;
+}
+
+button {
+    background-color: #73628A;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    cursor: pointer;
+    border-radius: 25px;
+    font-size: 1.2em;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #CBC5EA;
+}
+
+button:active {
+    background-color: #313D5A;
+}
