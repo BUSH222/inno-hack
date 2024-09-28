@@ -8,14 +8,14 @@ services:
     depends_on:
       - db
     environment:
-      - DATABASE_URL=postgresql://postgres:12345678@db:5432/slotmachine
+      - DATABASE_URL=postgresql://postgres:12345678@db:5432/inno-hack-vcs
 
   db:
     image: postgres:16.4
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 123445678
-      POSTGRES_DB: slotmachine
+      POSTGRES_DB: inno-hack-vcs
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
