@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commit List</title>
+    <link rel="stylesheet" href="static/commit_list.css">
+</head>
+<body>
+    <div class="repositories">
+        <h2>Commit List</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Creation Date</th>
+                    <th>Author</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for commit in commits %}
+                <tr>
+                    <td>{{ commit.id }}</td>
+                    <td>{{ commit.name }}</td>
+                    <td>{{ commit.creation_date }}</td>
+                    <td>{{ commit.author }}</td>
+                    <td><button onclick="window.location.href='/commit_files?id={{ commit.id }}';">View</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

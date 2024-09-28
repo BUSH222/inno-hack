@@ -2,46 +2,91 @@ body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
+    background-image: url('/static/background.png');
+    background-size: cover;
 }
 
 .navbar {
     display: flex;
     align-items: center;
-    padding: 10px;
-    background-size: cover;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.8);
+    border-bottom: 2px solid #ccc;
 }
 
-#searchRepo {
+.search-bar {
     flex: 1;
-    padding: 5px;
-    margin-right: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    font-size: 16px;
 }
 
-button {
-    padding: 5px 10px;
-    margin-left: 10px;
+.new-repo-btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 20px;
+    background-color: #73628A;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.new-repo-btn:hover {
+    background-color: #9b51e0;
 }
 
 .user-section {
     display: flex;
     align-items: center;
-    padding: 10px;
-    background-color: #f4f4f4;
+    padding: 10px 20px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    margin: 20px;
 }
 
-.user-section img {
+.avatar {
     width: 50px;
     height: 50px;
     border-radius: 50%;
     margin-right: 10px;
+    border: 2px solid #73628A;
 }
 
 .username {
     flex: 1;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.user-actions {
+    display: flex;
+}
+
+button {
+    padding: 5px 10px;
+    margin-left: 10px;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    background-color: #9b51e0;
+    color: white;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #73628A;
 }
 
 .repositories {
     padding: 20px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    margin: 20px;
+}
+
+h2 {
+    color: #313D5A;
 }
 
 table {
@@ -60,4 +105,5 @@ th, td {
 
 th {
     background-color: #f4f4f4;
+    font-weight: bold;
 }

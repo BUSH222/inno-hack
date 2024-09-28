@@ -18,6 +18,14 @@ def login_password():
 def account():
     return render_template("account.html")
 
+@app.route('/signup')
+def signup():
+    return render_template("signup.html")
+
+
+@app.route('/commit_new')
+def commit_new():
+    return render_template("commit_new.html")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000)
