@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repository Management</title>
+    <link rel="stylesheet" href="static/account.css">
+</head>
+<body>
+    <div class="navbar" style="background-image: url('static/background.png');">
+        <input type="text" id="searchRepo" placeholder="Find a repository...">
+        <button onclick="window.location.href='/new_repository_creator';">+ New</button>
+    </div>
+
+    <div class="user-section">
+        <img src="static/chrome.png" alt="User Avatar">
+        <div class="username">username</div>
+        <button>INFO</button>
+        <button>Edit profile</button>
+        <button onclick="window.location.href='/logout';">log out</button>
+    </div>
+
+    <div class="repositories">
+        <h2>My repositories</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Creation Date</th>
+                    <th>Author</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for repo in repositories %}
+                <tr>
+                    <td>{{ repo.id }}</td>
+                    <td>{{ repo.name }}</td>
+                    <td>{{ repo.creation_date }}</td>
+                    <td>{{ repo.author }}</td>
+                    <td><button onclick="window.location.href='/view_commit?id={{ repo.id }}';">View</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
