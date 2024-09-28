@@ -155,7 +155,7 @@ def dashboard():
             return redirect(url_for("new_repository_creator"))
         elif usr_input["btn_type"] == "join_repository":
             if check_access(usr_input["rep_id"], current_user.id):
-                return redirect(url_for('repository_edit'), rep_id=usr_input['rep_id'])
+                return redirect(url_for('view_commit'), rep_id=usr_input['rep_id'])
             else:
                 return render_template("error.html", change="error! you have no access")
         elif usr_input["btn_type"] == "my_repositoriers":
@@ -172,7 +172,7 @@ def my_reps():
     if request.method == "POST":
         usr_input = request.json
         if usr_input["btn_click"] == "edit_existing_repo":
-            return redirect(url_for("repository_edit", usr_input["rep_id"]))
+            return redirect(url_for("view_commit", usr_input["rep_id"]))
         elif usr_input["btn_click"] == "create_new_repo":
             return redirect(url_for("new_repository_creator"))
     return render_template("account.html", info=info)
@@ -185,16 +185,17 @@ def n_creator():
         info = request.json
         # check validity of info provided
         rep_id = create_repository(current_user.id, info["repository_name"])
-        return redirect(url_for('repository_edit'), rep_id=rep_id)
+        return redirect(url_for('view_commit'), rep_id=rep_id)
     return render_template()  # maybe create and just open a new blank repository
 
 
-@app.route('/repository_edit', methods=['GET', 'POST'])
+@app.route('/view_commit', methods=['GET', 'POST'])
 @login_required
 def e_editor():
     if request.method == "GET":
         rep_id = request.args.get("rep_id")
         user_id = current_user.id
+        print(rep_id, user_id)
         if check_access(rep_id, user_id):
             contains = get_repo_info(rep_id)
         else:
@@ -231,7 +232,7 @@ def add_users():
                 add_user_to_repo(rep_id, usr_input["user_id_to_add"])
             else:
                 abort(403)
-    return redirect(url_for('repository_edit', rep_id=rep_id))
+    return redirect(url_for('view_commit', rep_id=rep_id))
 
 
 @app.route('/new_commit', methods=["POST"])
