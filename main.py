@@ -3,7 +3,7 @@ from flask_login import login_user, LoginManager, current_user, login_required, 
 from dbmanager import (preload_db, create_user, get_all_user_data_by_name,
                        get_all_user_data_by_id, check_access, create_repository,
                        get_repo_info, get_user_repos, add_user_to_repo, make_commit,
-                       validate_pwd, get_latest_commit, get_commit_files, 
+                       validate_pwd, get_latest_commit, get_commit_files,
                        get_full_repo_info, get_username_by_id)
 from oauthlib.oauth2 import WebApplicationClient
 from helper import (GOOGLE_CLIENT_ID,
@@ -78,16 +78,16 @@ def login():
 
 @app.route('/login_gmail', methods=['GET', 'POST'])
 def login_gmail():
-        # Find out what URL to hit for Google login
-        authorization_endpoint = google_provider_cfg["authorization_endpoint"]
+    # Find out what URL to hit for Google login
+    authorization_endpoint = google_provider_cfg["authorization_endpoint"]
 
-        # Use library to construct the request for Google login and provide
-        # scopes that let you retrieve user's profile from Google
-        request_uri = client.prepare_request_uri(
-            authorization_endpoint,
-            redirect_uri=request.base_url + "/callback",
-            scope=["openid", "email", "profile"],)
-        return redirect(request_uri)
+    # Use library to construct the request for Google login and provide
+    # scopes that let you retrieve user's profile from Google
+    request_uri = client.prepare_request_uri(
+        authorization_endpoint,
+        redirect_uri=request.base_url + "/callback",
+        scope=["openid", "email", "profile"],)
+    return redirect(request_uri)
 
 
 @app.route("/login/callback")
