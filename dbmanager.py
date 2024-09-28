@@ -98,5 +98,5 @@ def get_commit_files(commitid):
 
 
 if __name__ == "__main__":
-    preload_db(populate=False)
+    preload_db(populate=True)
     conn.close()
