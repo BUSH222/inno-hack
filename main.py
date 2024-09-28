@@ -1,13 +1,13 @@
 from flask import Flask, redirect, render_template, request, url_for, abort
 from flask_login import login_user, LoginManager, current_user, login_required, UserMixin, logout_user
-from dbmanager import (conn, cur, preload_db, create_user, get_all_user_data_by_name,
+from dbmanager import (preload_db, create_user, get_all_user_data_by_name,
                        get_all_user_data_by_id, check_access, create_repository,
-                       get_repo_info, get_user_repos, add_user_to_repo, make_commit)
+                       get_repo_info, get_user_repos, add_user_to_repo, make_commit,
+                       validate_pwd, get_latest_commit)
 from oauthlib.oauth2 import WebApplicationClient
 from helper import (GOOGLE_CLIENT_ID,
                     GOOGLE_CLIENT_SECRET,
-                    GOOGLE_DISCOVERY_URL,
-                    APPROVED_EMAILS)
+                    GOOGLE_DISCOVERY_URL)
 import requests
 import json
 
@@ -37,35 +37,36 @@ def load_user(user_id):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # Find out what URL to hit for Google login
-    authorization_endpoint = google_provider_cfg["authorization_endpoint"]
+    if request.method == 'POST':
+        usr_input = request.json
+        if usr_input["btn_type"] == "use_password":  # ВНИМАНИЕ use_password хз что делать что бы он работал
+            username = request.form['username']
+            password = request.form['password']
+            user_data = get_all_user_data_by_name(username)
+            if user_data:
+                if user_data[2] == password and len(password) < 32:
+                    user = User(*user_data)
+                    login_user(user)
+                    return redirect(url_for('dashboard'))
+                else:
+                    return "Invalid username or password"
+            else:
+                new_user_data = create_user(username, password)
+                new_user = User(*new_user_data)
+                login_user(new_user)
+                return redirect(url_for('dashboard'))
+        else:
+            # Find out what URL to hit for Google login
+            authorization_endpoint = google_provider_cfg["authorization_endpoint"]
 
-    # Use library to construct the request for Google login and provide
-    # scopes that let you retrieve user's profile from Google
-    request_uri = client.prepare_request_uri(
-        authorization_endpoint,
-        redirect_uri=request.base_url + "/callback",
-        scope=["openid", "email", "profile"],
-    )
-    return redirect(request_uri)
-    # if request.method == 'POST':
-    #     username = request.form['username']
-    #     password = request.form['password']
-    #     user_data = get_all_user_data_by_name(username)
-    #     if user_data:
-    #         if user_data[2] == password and len(password) < 32:
-    #             user = User(*user_data)
-    #             login_user(user)
-    #             return redirect(url_for('dashboard'))
-    #         else:
-    #             print("bruh")
-    #     else:
-    #         new_user_data = create_user(username, password)
-    #         new_user = User(*new_user_data)
-    #         login_user(new_user)
-    #         return redirect(url_for('dashboard'))
-    # else:
-    #     return render_template('login.html')
+            # Use library to construct the request for Google login and provide
+            # scopes that let you retrieve user's profile from Google
+            request_uri = client.prepare_request_uri(
+                authorization_endpoint,
+                redirect_uri=request.base_url + "/callback",
+                scope=["openid", "email", "profile"],)
+            return redirect(request_uri)
+    return render_template('login.html')
 
 
 @app.route("/login/callback")
@@ -96,7 +97,6 @@ def callback():
     if userinfo_response.json().get("email_verified"):
         unique_id = userinfo_response.json()["sub"]
         users_email = userinfo_response.json()["email"]
-        picture = userinfo_response.json()["picture"]
         users_name = userinfo_response.json()["given_name"]
     else:
         return "User email not available or not verified by Google.", 400
@@ -105,10 +105,8 @@ def callback():
     #     abort(403)
 
     user = User(id_=unique_id, name=users_name, email=users_email)
-    if user.email in APPROVED_EMAILS:  # give user admin
-        user.adminst = 1
     if not User.get(unique_id):
-        User.create(unique_id, users_name, users_email, admin=1)
+        User.create(unique_id, users_name, users_email)
     login_user(user)
     return redirect(url_for("index"))
 
@@ -125,14 +123,14 @@ def logout():
 def dashboard():
     if request.method == "POST":
         usr_input = request.json
-        if usr_input["btn_type"] == "new_reposidtory":
+        if usr_input["btn_type"] == "new_repository":
             return redirect(url_for("new_repository_creator"))
-        if usr_input["btn_type"] == "join_reposidtory":
+        if usr_input["btn_type"] == "join_repository":
             if check_access(usr_input["rep_id"], current_user.id):
                 return redirect(url_for('repository_edit'), rep_id=usr_input['rep_id'])
             else:
                 return render_template("error.html", change="error! you have no access")
-        if usr_input["btn_type"] == "my_reposidtoriers":
+        if usr_input["btn_type"] == "my_repositoriers":
             return redirect(url_for('my_repositories'))
     return render_template("error.html", change='')
 
@@ -181,23 +179,21 @@ def e_editor():
     return render_template("commit_list.html", contains=contains)
 
 
-@app.route('/add_users_to_repo', method=["POST"])
+@app.route('/add_users_to_repo', methods=["POST"])
 @login_required
 def add_users():
-    change = ''
     if request.method == "POST":
         usr_input = request.json
         rep_id = request.args.get("rep_id")
         if check_access(rep_id, current_user.id):
             if usr_input["btn_click"] == "add":
                 add_user_to_repo(rep_id, usr_input["user_id_to_add"])
-                change = "Users added!"
             else:
                 abort(403)
     return redirect(url_for('repository_edit', rep_id=rep_id))
 
 
-@app.route('/new_commit', method=["POST"])
+@app.route('/new_commit', methods=["POST"])
 @login_required
 def c_editor():
     change = ''
@@ -212,6 +208,41 @@ def c_editor():
         else:
             abort(403)
     return render_template("commit_new.html", change=change)
+
+
+@app.route('/api/commit', methods=["POST"])  # API START
+def commit_api():
+    file = request.files()['file']
+    name = request.args('name')
+
+    userid = request.args.get('userid')
+    pwd = request.args.get('pwd')
+    repoid = request.args.get('repoid')
+    if validate_pwd(userid, pwd) and check_access(repoid, userid):
+        make_commit(file.read(), userid, repoid, name)
+        return 'Success'
+    return 'Verification error, you don\'t have access to the repository or your password and username are wrong'
+
+
+@app.route('/api/update', methods=['GET'])
+def update_api():
+    userid = request.args.get('userid')
+    pwd = request.args.get('pwd')
+    repoid = request.args.get('repoid')
+    if validate_pwd(userid, pwd) and check_access(repoid, userid):
+        return get_latest_commit(repoid)
+    else:
+        return None
+
+
+@app.route('/api/init', methods=['POST'])
+def init_repo():
+    userid = request.args.get('userid')
+    pwd = request.args.get('pwd')
+    if validate_pwd(userid, pwd):
+        create_repository(userid, pwd)
+    else:
+        return None
 
 
 if __name__ == '__main__':

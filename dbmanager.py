@@ -70,6 +70,18 @@ def add_user_to_repo(userid, repoid):
     conn.commit()
 
 
+def validate_pwd(userid, pwd):
+    cur.execute('SELECT userid, pwd FROM users WHERE EXISTS(SELECT 1 FROM users WHERE id = %s AND password = %s))',
+                (userid, pwd))
+    return bool(cur.fetchone())
+
+
+def get_latest_commit(repoid):
+    cur.execute('SELECT id, name, data FROM commits WHERE repository = %s ORDER BY creation_time DESC LIMIT 1;',
+                (repoid, ))
+    return cur.fetchone()[0]
+
+
 if __name__ == "__main__":
     preload_db(populate=False)
     conn.close()
