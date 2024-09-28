@@ -22,11 +22,11 @@
             <tbody>
                 {% for commit in commits %}
                 <tr>
-                    <td>{{ commit.id }}</td>
-                    <td>{{ commit.name }}</td>
-                    <td>{{ commit.creation_date }}</td>
-                    <td>{{ commit.author }}</td>
-                    <td><button onclick="window.location.href='/commit_files?id={{ commit.id }}';">View</button></td>
+                    <td>{{ commit[0] }}</td>
+                    <td>{{ commit[1] }}</td>
+                    <td>{{ commit[2] }}</td>
+                    <td>{{ commit[3] }}</td>
+                    <td><button onclick="window.location.href='/commit_files?commit_id={{ commit[0] }}';">View</button></td>
                 </tr>
                 {% endfor %}
             </tbody>

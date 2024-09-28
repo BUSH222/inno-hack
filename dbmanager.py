@@ -36,6 +36,11 @@ def get_all_user_data_by_id(id):
     return cur.fetchone()
 
 
+def get_username_by_id(id):
+    cur.execute("SELECT name FROM users WHERE id = %s", (id,))
+    return cur.fetchone()[0]
+
+
 def check_access(repoid, userid):
     cur.execute("SELECT 1 FROM repo_access WHERE EXISTS (SELECT 1 FROM repo_access WHERE repoid = %s AND userid = %s)",
                 (repoid, userid))
@@ -49,7 +54,7 @@ def create_repository(userid, reponame):
 
 
 def get_repo_info(id):
-    cur.execute('SELECT id, name FROM commits WHERE repository = %s', (id, ))
+    cur.execute('SELECT id, name, creation_time, author FROM commits WHERE repository = %s', (id, ))
     return cur.fetchall()
 
 
@@ -88,7 +93,7 @@ def get_latest_commit(repoid):
 
 
 def get_commit_files(commitid):
-    cur.execute('SELECT data FROM commits WHERE id = %s', commitid)
+    cur.execute('SELECT data FROM commits WHERE id = %s', (commitid, ))
     return cur.fetchone()[0]
 
 

@@ -1,10 +1,10 @@
-from flask import Flask, redirect, render_template, request, url_for, abort
+from flask import Flask, redirect, render_template, request, url_for, abort, Response
 from flask_login import login_user, LoginManager, current_user, login_required, UserMixin, logout_user
 from dbmanager import (preload_db, create_user, get_all_user_data_by_name,
                        get_all_user_data_by_id, check_access, create_repository,
                        get_repo_info, get_user_repos, add_user_to_repo, make_commit,
                        validate_pwd, get_latest_commit, get_commit_files, 
-                       get_full_repo_info)
+                       get_full_repo_info, get_username_by_id)
 from oauthlib.oauth2 import WebApplicationClient
 from helper import (GOOGLE_CLIENT_ID,
                     GOOGLE_CLIENT_SECRET,
@@ -197,7 +197,9 @@ def e_editor():
         user_id = current_user.id
         print(rep_id, user_id)
         if check_access(rep_id, user_id):
-            contains = get_repo_info(rep_id)
+            contains = []
+            for item in get_repo_info(rep_id):
+                contains.append([item[0], item[1], item[2], get_username_by_id(item[3])])
         else:
             abort(403)
     if request.method == "POST":
@@ -208,7 +210,7 @@ def e_editor():
             return redirect(url_for('add_users_to_repo'), rep_id=rep_id)
         elif user_choice["btn_click"] == "commit_files":
             return redirect(url_for('commit_files'), commit_id=user_choice["commit_id"])
-    return render_template("commit_list.html", contains=contains)
+    return render_template("commit_list.html", commits=contains)
 
 
 @app.route('/commit_files', methods=["POST", "GET"])
@@ -218,7 +220,9 @@ def files():
     if request.method == "GET":
         commit_id = request.args.get("commit_id")
         results = get_commit_files(commit_id)
-    return render_template("commit_files.html", info=results)
+        response = Response(results, mimetype='application/octet-stream')
+        response.headers['Content-Disposition'] = f'attachment; filename=commit{commit_id}.txt'
+    return response
 
 
 @app.route('/add_users_to_repo', methods=["POST"])
