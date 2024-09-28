@@ -3,7 +3,7 @@ from flask_login import login_user, LoginManager, current_user, login_required, 
 from dbmanager import (preload_db, create_user, get_all_user_data_by_name,
                        get_all_user_data_by_id, check_access, create_repository,
                        get_repo_info, get_user_repos, add_user_to_repo, make_commit,
-                       validate_pwd, get_latest_commit)
+                       validate_pwd, get_latest_commit, get_commit_files)
 from oauthlib.oauth2 import WebApplicationClient
 from helper import (GOOGLE_CLIENT_ID,
                     GOOGLE_CLIENT_SECRET,
@@ -176,7 +176,19 @@ def e_editor():
             return redirect(url_for('new_commit', rep_id=rep_id))
         elif user_choice["btn_click"] == "add_users_to_repository":
             return redirect(url_for('add_users_to_repo'), rep_id=rep_id)
+        elif user_choice["btn_click"] == "files_of_commit":
+            return redirect(url_for('files_of_commit'), commit_id=user_choice["commit_id"])
     return render_template("commit_list.html", contains=contains)
+
+
+@app.route('/files_of_commit', methods=["POST", "GET"])
+@login_required
+def files():
+    results = ''
+    if request.method == "GET":
+        commit_id = request.args.get("commit_id")
+        results = get_commit_files(commit_id)
+    return render_template("commit_files.html", info=results)
 
 
 @app.route('/add_users_to_repo', methods=["POST"])

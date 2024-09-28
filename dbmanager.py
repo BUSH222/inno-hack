@@ -82,6 +82,11 @@ def get_latest_commit(repoid):
     return cur.fetchone()[0]
 
 
+def get_commit_files(commitid):
+    cur.execute('SELECT data FROM commits WHERE id = %s', commitid)
+    return cur.fetchone()[0]
+
+
 if __name__ == "__main__":
     preload_db(populate=False)
     conn.close()
