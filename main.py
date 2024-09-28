@@ -176,12 +176,12 @@ def e_editor():
             return redirect(url_for('new_commit', rep_id=rep_id))
         elif user_choice["btn_click"] == "add_users_to_repository":
             return redirect(url_for('add_users_to_repo'), rep_id=rep_id)
-        elif user_choice["btn_click"] == "files_of_commit":
-            return redirect(url_for('files_of_commit'), commit_id=user_choice["commit_id"])
+        elif user_choice["btn_click"] == "commit_files":
+            return redirect(url_for('commit_files'), commit_id=user_choice["commit_id"])
     return render_template("commit_list.html", contains=contains)
 
 
-@app.route('/files_of_commit', methods=["POST", "GET"])
+@app.route('/commit_files', methods=["POST", "GET"])
 @login_required
 def files():
     results = ''
