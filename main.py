@@ -1,24 +1,19 @@
 from flask import Flask, redirect, render_template, request, url_for, abort, Response
+from flask_login import login_required
 from flask_login import login_user, LoginManager, current_user, login_required, UserMixin, logout_user
-from dbmanager import (preload_db, create_user, get_all_user_data_by_name,
-                       get_all_user_data_by_id, check_access, create_repository,
-                       get_repo_info, get_user_repos, add_user_to_repo, make_commit,
-                       validate_pwd, get_latest_commit, get_commit_files,
-                       get_full_repo_info, get_username_by_id)
-from oauthlib.oauth2 import WebApplicationClient
-from helper import (GOOGLE_CLIENT_ID,
-                    GOOGLE_CLIENT_SECRET,
-                    GOOGLE_DISCOVERY_URL)
+from sqlalchemy import select, func, extract, and_, inspect
+from sqlalchemy.orm import Session
+from dbmanager import (get_all_user_data_by_name,get_stations_by_user_id,get_user_id_by_name,get_station_brief_info_by_id,get_full_station_info_by_id,get_station_owner,update_station_info)
+import urllib.parse
 import requests
-import json
+from datetime import datetime
+from dateutil.parser import parse
+from helper import generate_coordinate_id
 
 
 app = Flask(__name__)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
-google_provider_cfg = requests.get(GOOGLE_DISCOVERY_URL).json()
-client = WebApplicationClient(GOOGLE_CLIENT_ID)
-app.config['SECRET_KEY'] = 'bruh'
 
 
 class User(UserMixin):
@@ -26,15 +21,6 @@ class User(UserMixin):
         self.id = id
         self.username = username
         self.password = password
-        self.email = email
-
-
-@login_manager.user_loader
-def load_user(user_id):
-    user_data = get_all_user_data_by_id(user_id)
-    if user_data:
-        return User(*user_data)
-    return None
 
 
 @app.route('/')
@@ -45,91 +31,18 @@ def index():
 @app.route('/login_password', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        if True:   # usr_input["btn_type"] == "use_password"
-            username = request.form['username']
-            password = request.form['password']
-            user_data = list(get_all_user_data_by_name(username))
-            print(user_data)
-            if user_data:
-                if user_data[2] == password and len(password) < 32:
-                    user = User(*user_data)
-                    login_user(user)
-                    return redirect(url_for('dashboard'))
-                else:
-                    return "Invalid username or password"
+        username = request.form['username']
+        password = request.form['password']
+        user_data = list(get_all_user_data_by_name(username))
+        print(user_data)
+        if user_data:
+            if user_data[2] == password and len(password) < 32:
+                user = User(*user_data)
+                login_user(user)
+                return redirect(url_for('user_stations'))
             else:
-                new_user_data = create_user(username, password)
-                new_user = User(*new_user_data)
-                login_user(new_user)
-                return redirect(url_for('dashboard'))
-        else:
-            # Find out what URL to hit for Google login
-            authorization_endpoint = google_provider_cfg["authorization_endpoint"]
-
-            # Use library to construct the request for Google login and provide
-            # scopes that let you retrieve user's profile from Google
-            request_uri = client.prepare_request_uri(
-                authorization_endpoint,
-                redirect_uri=request.base_url + "/callback",
-                scope=["openid", "email", "profile"],)
-            return redirect(request_uri)
+                return "Invalid username or password"
     return render_template('login_password.html')
-
-
-@app.route('/login_gmail', methods=['GET', 'POST'])
-def login_gmail():
-    # Find out what URL to hit for Google login
-    authorization_endpoint = google_provider_cfg["authorization_endpoint"]
-
-    # Use library to construct the request for Google login and provide
-    # scopes that let you retrieve user's profile from Google
-    request_uri = client.prepare_request_uri(
-        authorization_endpoint,
-        redirect_uri=request.base_url + "/callback",
-        scope=["openid", "email", "profile"],)
-    return redirect(request_uri)
-
-
-@app.route("/login/callback")
-def callback():
-    """Get authorization code Google sent back to you"""
-    code = request.args.get("code")
-    google_provider_cfg = requests.get(GOOGLE_DISCOVERY_URL).json()
-    token_endpoint = google_provider_cfg["token_endpoint"]
-    token_url, headers, body = client.prepare_token_request(
-        token_endpoint,
-        authorization_response=request.url,
-        redirect_url=request.base_url,
-        code=code
-    )
-    token_response = requests.post(
-        token_url,
-        headers=headers,
-        data=body,
-        auth=(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET),
-    )
-
-    # Parse the tokens!
-    client.parse_request_body_response(json.dumps(token_response.json()))
-    userinfo_endpoint = google_provider_cfg["userinfo_endpoint"]
-    uri, headers, body = client.add_token(userinfo_endpoint)
-    userinfo_response = requests.get(uri, headers=headers, data=body)
-
-    if userinfo_response.json().get("email_verified"):
-        unique_id = userinfo_response.json()["sub"]
-        users_email = userinfo_response.json()["email"]
-        users_name = userinfo_response.json()["given_name"]
-    else:
-        return "User email not available or not verified by Google.", 400
-
-    # if not users_email.endswith('@edu.misis.ru'):
-    #     abort(403)
-
-    user = User(id_=unique_id, name=users_name, email=users_email)
-    if not User.get(unique_id):
-        User.create(unique_id, users_name, users_email)
-    login_user(user)
-    return redirect(url_for("index"))
 
 
 @app.route('/logout')
@@ -138,159 +51,89 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+@app.route('/')
+def main():
+    return('main.html')
 
-@app.route('/dashboard', methods=['GET', 'POST'])
+@app.route('/users/<current_user.name>', methods=['GET', 'POST'])
 @login_required
-def dashboard():
+def user_stations():
+    info = []
     if request.method == "GET":
-        repositories = []
-        for repo in get_user_repos(current_user.id):
-            repositories.append(get_full_repo_info(repo))
-        username = current_user.username
-        print(get_user_repos(current_user.id))
-        return render_template("account.html", username=username, repositories=repositories)
-    if request.method == "POST":
-        usr_input = request.json
-        if usr_input["btn_type"] == "new_repository":
-            return redirect(url_for("new_repository_creator"))
-        elif usr_input["btn_type"] == "join_repository":
-            if check_access(usr_input["rep_id"], current_user.id):
-                return redirect(url_for('view_commit'), rep_id=usr_input['rep_id'])
-            else:
-                return render_template("error.html", change="error! you have no access")
-        elif usr_input["btn_type"] == "my_repositoriers":
-            return redirect(url_for('my_repositories'))
+        user_id = get_user_id_by_name(current_user.name)
+        stations_id =get_stations_by_user_id(user_id)
+        for id in stations_id:
+            ex = get_station_brief_info_by_id(id)
+            info.append(ex)
+    return render_template("stations.html",stations = info)
 
-    return render_template("error.html", change='')
-
-
-@app.route('/my_repositories', methods=['GET', 'POST'])
+@app.route('/stations/<id>', methods=['GET', 'POST'])
 @login_required
-def my_reps():
+def station(id):
+    user_id = get_user_id_by_name(current_user.name)
+    user_owned_stations = get_stations_by_user_id(user_id)
+    if user_id in user_owned_stations:
+        change_button = True
     if request.method == "GET":
-        info = get_user_repos(current_user.id)
-    if request.method == "POST":
-        usr_input = request.json
-        if usr_input["btn_click"] == "edit_existing_repo":
-            return redirect(url_for("view_commit", usr_input["rep_id"]))
-        elif usr_input["btn_click"] == "create_new_repo":
-            return redirect(url_for("new_repository_creator"))
-    return render_template("account.html", info=info)
+        owner = get_station_owner(id)
+        info = get_full_station_info_by_id(id)
+        info.append(owner)
+    return render_template("stations.html",info=info,change_button=change_button)
 
 
-@app.route('/new_repository_creator', methods=['GET', 'POST'])
+@app.route('/stations/<id>/dashboard', methods=['GET', 'POST'])
 @login_required
-def n_creator():
-    if request.method == "POST":
-        info = request.json
-        # check validity of info provided
-        rep_id = create_repository(current_user.id, info["repository_name"])
-        return redirect(url_for('view_commit'), rep_id=rep_id)
-    return render_template()  # maybe create and just open a new blank repository
+def station_dashboard(id):
+    return render_template("stations_dashboard.html",id=id)
 
 
-@app.route('/view_commit', methods=['GET', 'POST'])
+
+@app.route('/stations/<id>/dashboard/map', methods=['GET', 'POST'])
 @login_required
-def e_editor():
+def map(id):
     if request.method == "GET":
-        rep_id = request.args.get("rep_id")
-        user_id = current_user.id
-        print(rep_id, user_id)
-        if check_access(rep_id, user_id):
-            contains = []
-            for item in get_repo_info(rep_id):
-                contains.append([item[0], item[1], item[2], get_username_by_id(item[3])])
-        else:
-            abort(403)
-    if request.method == "POST":
-        user_choice = request.json
-        if user_choice["btn_click"] == "new_commit":
-            return redirect(url_for('new_commit', rep_id=rep_id))
-        elif user_choice["btn_click"] == "add_users_to_repository":
-            return redirect(url_for('add_users_to_repo'), rep_id=rep_id)
-        elif user_choice["btn_click"] == "commit_files":
-            return redirect(url_for('commit_files'), commit_id=user_choice["commit_id"])
-    return render_template("commit_list.html", commits=contains)
+        info = get_full_station_info_by_id(id)
+        station_planned_tles = requests.get(f'/api/jobs/?id=&status=&ground_station={id}&start=&end=&satellite__norad_cat_id=&transmitter__uuid=&transmitter__downlink_mode=&transmitter__type=&waterfall_status=&vetted_status=&vetted_user=&observer=&observation_id=')
+        tles = []
+        for i in station_planned_tles:
+            res = {}
+            res["tle0"] = station_planned_tles["tle0"]
+            res["tle1"] = station_planned_tles["tle1"]
+            res["tle2"] = station_planned_tles["tle2"]
+            tles.append(res)
+    return render_template("stations_map.html",info=info,tles=tles)
 
 
-@app.route('/commit_files', methods=["POST", "GET"])
+@app.route('/stations/<id>/dashboard/reception', methods=['GET', 'POST'])
 @login_required
-def files():
-    results = ''
+def reception(id):
+    return render_template('reception.html',id=id)
+
+
+
+@app.route('/stations/<id>/dashboard/archive', methods=['GET', 'POST'])
+@login_required
+def reception(id):
+    return render_template('archive.html',id=id)
+
+
+@app.route('/stations/edit/<id>', methods=['GET', 'POST'])
+@login_required   
+def edit_station(id):
     if request.method == "GET":
-        commit_id = request.args.get("commit_id")
-        results = get_commit_files(commit_id)
-        response = Response(results, mimetype='application/octet-stream')
-        response.headers['Content-Disposition'] = f'attachment; filename=commit{commit_id}.txt'
-    return response
-
-
-@app.route('/add_users_to_repo', methods=["POST"])
-@login_required
-def add_users():
+        info = get_full_station_info_by_id(id)
     if request.method == "POST":
-        usr_input = request.json
-        rep_id = request.args.get("rep_id")
-        if check_access(rep_id, current_user.id):
-            if usr_input["btn_click"] == "add":
-                add_user_to_repo(rep_id, usr_input["user_id_to_add"])
-            else:
-                abort(403)
-    return redirect(url_for('view_commit', rep_id=rep_id))
+            name = request.form["name"]
+            lat = request.form["lat"]
+            long = request.form["long"]
+            alt = request.form["alt"]
+            notif_mai = request.form["notif_mai"]
+            notif_tg = request.form["notif_tg"]
+            early_time = request.form["early_time"]
+            sdr_server_address = request.form["sdr_server_address"]
+            update_station_info(id,name = name,lat = lat,long = long,alt= alt,notif_mai= notif_mai,notif_tg= notif_tg,early_time= early_time, sdr_server_address=sdr_server_address)
+            return(redirect(url_for('satation',id=id)))
+
+    return render_template("stations_editor.html",info = info)
 
 
-@app.route('/new_commit', methods=["POST"])
-@login_required
-def c_editor():
-    change = ''
-    if request.method == "POST":
-        user_changes = request.json
-        rep_id = request.args.get("rep_id")
-        user_id = current_user.id
-        if check_access(rep_id, user_id):
-            if user_changes["btn_type"] == 'commit':
-                make_commit(user_changes["text"], user_id, rep_id, user_changes["c_name"])
-                change = 'Commited!'
-        else:
-            abort(403)
-    return render_template("commit_new.html", change=change)
-
-
-@app.route('/api/commit', methods=["POST"])  # API START
-def commit_api():
-    file = request.files()['file']
-    name = request.args('name')
-
-    userid = request.args.get('userid')
-    pwd = request.args.get('pwd')
-    repoid = request.args.get('repoid')
-    if validate_pwd(userid, pwd) and check_access(repoid, userid):
-        make_commit(file.read(), userid, repoid, name)
-        return 'Success'
-    return 'Verification error, you don\'t have access to the repository or your password and username are wrong'
-
-
-@app.route('/api/update', methods=['GET'])
-def update_api():
-    userid = request.args.get('userid')
-    pwd = request.args.get('pwd')
-    repoid = request.args.get('repoid')
-    if validate_pwd(userid, pwd) and check_access(repoid, userid):
-        return get_latest_commit(repoid)
-    else:
-        return None
-
-
-@app.route('/api/init', methods=['POST'])
-def init_repo():
-    userid = request.args.get('userid')
-    pwd = request.args.get('pwd')
-    if validate_pwd(userid, pwd):
-        create_repository(userid, pwd)
-    else:
-        return None
-
-
-if __name__ == '__main__':
-    preload_db()
-    app.run(host='0.0.0.0', port=8000)  # , ssl_context='adhoc')
